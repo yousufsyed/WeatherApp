@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Weather Updates</string>
+    <string name="loading_message">Weather is Loading…</string>
+    <string name="error_message">Something went wrong, try again.</string>
+    <string name="retry">Retry</string>
+    <string name="search_hint">Entry city name</string>
+    <string name="search">Search</string>
+    <string name="feels_like">Feels like %1$s</string>
+    <string name="presure">Presure: %1$d</string>
+    <string name="humidity">Humidity: %1$d</string>
+    <string name="unavailable">Unavailable</string>
+
+    <string name="location_fetch_failed">Can\'t get your Location. Please enter manually.</string>
+    <string name="permission_denied">Location permission denied. Please enter manually.</string>
+</resources>
