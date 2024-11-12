@@ -10,15 +10,9 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -27,14 +21,14 @@ import com.yousuf.weatherapp.R
 import com.yousuf.weatherapp.WeatherViewModel
 import com.yousuf.weatherapp.network.data.GeoLocation
 import java.util.Locale
+import kotlin.collections.isNotEmpty
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ShowRationalDialog(
-    viewModel: WeatherViewModel = hiltViewModel<WeatherViewModel>()
+    viewModel: WeatherViewModel = hiltViewModel()
 ) {
     val permissions = listOf<String>(ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION)
-    val showRationalDialog = remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
@@ -49,65 +43,30 @@ fun ShowRationalDialog(
                     { location -> viewModel.updateLocation(location) },
                     ::onLocationFetchFailed
                 )
-            } else {
-                onPermissionDenied(context)
             }
         }
     )
-
-    if (showRationalDialog.value) {
-        AlertDialog(
-            onDismissRequest = {
-                showRationalDialog.value = false
-            },
-            title = {
-                Text(
-                    text = "Location Permission",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            },
-            text = {
-                Text(
-                    "Please grant location permission to populate location automatically",
-                    fontSize = 16.sp
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showRationalDialog.value = false
-                        if (context.hasLocationPermission()) {
-                            // Permission already granted, update the location
-                            getCurrentLocation(
-                                context,
-                                { location -> viewModel.updateLocation(location) },
-                                ::onLocationFetchFailed
-                            )
-                        } else {
-                            requestPermissionLauncher.launch(permissions.toTypedArray()) // Request location permission
-                        }
-                    }
-                ) {
-                    Text("OK")
+    val showDialog = remember { viewModel.showDialog }
+    if (showDialog.value) {
+        AlertDialogScreen(
+            title = "Location Permission",
+            message = "This app requires location permission to function properly.",
+            onDismissed = { viewModel.disablePermissionsDialog() },
+            onConfirmed = {
+                viewModel.disablePermissionsDialog()
+                if (hasLocationPermission(context)) {
+                    // Permission already granted, update the location
+                    getCurrentLocation(
+                        context,
+                        { location -> viewModel.updateLocation(location) },
+                        ::onLocationFetchFailed
+                    )
+                } else {
+                    requestPermissionLauncher.launch(permissions.toTypedArray()) // Request location permission
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showRationalDialog.value = false }
-                ) {
-                    Text("Cancel")
-                }
-            },
+            }
         )
     }
-}
-
-/**
- * Handle permission denied, let the user know that he needs to enter location manually.
- */
-private fun onPermissionDenied(context: Context) {
-    showToast(context, R.string.permission_denied)
 }
 
 /**
@@ -122,7 +81,7 @@ private fun showToast(context: Context, @StringRes messageId: Int) {
 }
 
 @SuppressLint("MissingPermission")
-private fun getCurrentLocation(
+fun getCurrentLocation(
     context: Context,
     onLocationReceived: (GeoLocation) -> Unit,
     onFailureListener: (Context) -> Unit
@@ -156,7 +115,8 @@ private fun getCurrentLocation(
         }
 }
 
-private fun Context.hasLocationPermission(): Boolean {
-    return checkSelfPermission(this, ACCESS_FINE_LOCATION) == PERMISSION_GRANTED &&
-            checkSelfPermission(this, ACCESS_COARSE_LOCATION) == PERMISSION_GRANTED
+fun hasLocationPermission(context: Context): Boolean {
+    return checkSelfPermission(context, ACCESS_FINE_LOCATION) == PERMISSION_GRANTED &&
+            checkSelfPermission(context, ACCESS_COARSE_LOCATION) == PERMISSION_GRANTED
 }
+

@@ -1,26 +1,14 @@
 package com.yousuf.weatherapp.provider
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.location.Geocoder
-import com.google.android.gms.location.LocationServices
 import com.yousuf.weatherapp.network.GeoLocationClient
 import com.yousuf.weatherapp.network.data.GeoLocation
 import kotlinx.coroutines.withContext
-import java.util.Locale
 import javax.inject.Inject
-import kotlin.collections.isNotEmpty
 
 interface GeoLocationProvider {
     fun updateGeoLocation(location: GeoLocation)
 
     suspend fun getGeoLocation(city: String): GeoLocation
-
-    fun getCurrentLocation(
-        context: Context,
-        onLocationReceived: (String) -> Unit,
-        onFailureListener: (Context) -> Unit
-    )
 }
 
 /**
@@ -49,41 +37,4 @@ class GeoLocationProviderImpl @Inject constructor(
             }
         }
     }
-
-    @SuppressLint("MissingPermission")
-    override fun getCurrentLocation(
-        context: Context,
-        onLocationReceived: (String) -> Unit,
-        onFailureListener: (Context) -> Unit
-    ) {
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { location ->
-                if (location != null) {
-                    val lat = location.latitude
-                    val lon = location.longitude
-                    val geoCoder = Geocoder(context, Locale.getDefault())
-                    val addresses = geoCoder.getFromLocation(lat, lon, 1)
-                    if (addresses != null && addresses.isNotEmpty()) {
-                        updateGeoLocation(
-                            GeoLocation(
-                                lat = lat.toString(),
-                                lon = lon.toString(),
-                                city = addresses[0].locality,
-                                state = addresses[0].adminArea,
-                                country = addresses[0].countryName
-                            )
-                        )
-                        onLocationReceived(addresses[0].locality)
-                    } else {
-                        onFailureListener(context)
-                    }
-                }
-            }
-            .addOnFailureListener { exception ->
-                // Handle location retrieval failure
-                onFailureListener(context)
-            }
-    }
-
 }

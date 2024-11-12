@@ -1,14 +1,11 @@
 package com.yousuf.weatherapp
 
+import android.content.Context
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.AbstractSavedStateViewModelFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yousuf.weatherapp.WeatherUiState.Error
-import com.yousuf.weatherapp.WeatherUiState.Loading
-import com.yousuf.weatherapp.WeatherUiState.Search
-import com.yousuf.weatherapp.WeatherUiState.Success
 import com.yousuf.weatherapp.network.data.GeoLocation
 import com.yousuf.weatherapp.network.data.WeatherData
 import com.yousuf.weatherapp.provider.GeoLocationProvider
@@ -28,7 +25,7 @@ class WeatherViewModel @Inject constructor(
     private val appPrefs: AppPrefs
 ) : ViewModel() {
 
-    private val _weatherUiState = MutableStateFlow<WeatherUiState>(Search)
+    private val _weatherUiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Search)
     val weatherUiState = _weatherUiState.asStateFlow()
 
     private val _canRetry = MutableStateFlow(true)
@@ -43,14 +40,29 @@ class WeatherViewModel @Inject constructor(
     var weatherData = mutableStateOf(null as WeatherData?)
         private set
 
+    var locationErrorMessage = mutableStateOf(false)
+        private set
 
-    init {
-        fetchLocationPrefs()
+    var showDialog = mutableStateOf(true)
+        private set
+
+    fun disablePermissionsDialog() {
+        showDialog.value = false
     }
 
-    fun updateLocation(location: GeoLocation) {
-        updateSearchQuery(location.city)
-        geoLocationProvider.updateGeoLocation(location)
+    init {
+        viewModelScope.launch {
+            fetchLocationPrefs()
+        }
+    }
+
+    fun updateSearchQuery(query: String) {
+        searchQuery.value = query
+        saveCity(query)
+    }
+
+    fun showSearch() {
+        _weatherUiState.update { WeatherUiState.Search }
     }
 
     // fetch weather data and display appropriate state
@@ -61,7 +73,7 @@ class WeatherViewModel @Inject constructor(
         }
 
         _canRetry.update { false } // reset retry flag to false
-        _weatherUiState.update { Loading }
+        _weatherUiState.update { WeatherUiState.Loading }
         fetchWeatherData(searchQuery.value)
     }
 
@@ -74,31 +86,38 @@ class WeatherViewModel @Inject constructor(
                 weatherProvider.getWeatherData(geoLocation)
             }.onSuccess { weather ->
                 weatherData.value = weather
-                _weatherUiState.update { Success }
+                _weatherUiState.update { WeatherUiState.Success }
                 _canRetry.update { true }
                 saveCityToPrefs(city)
             }.onFailure { error ->
                 // TODO need to update error message logic to support localization.
                 errorMessage.value = error.message ?: "Unknown error"
-                _weatherUiState.update {Error }
+                _weatherUiState.update { Error }
                 _canRetry.update { true }
             }
         }
-    }
-
-    fun updateSearchQuery(query: String) {
-        searchQuery.value = query
-        saveCity(query)
-    }
-
-    fun showSearch() {
-        _weatherUiState.update { Search }
     }
 
     fun retry() {
         getLastKnownCity().let {
             getWeatherData()
         }
+    }
+
+    // update location fetch from device
+    fun updateLocation(location: GeoLocation) {
+        updateSearchQuery(location.city)
+        geoLocationProvider.updateGeoLocation(location)
+    }
+
+    private suspend fun fetchLocationPrefs() {
+        appPrefs.cityFlow.collect { city ->
+            updateSearchQuery(city)
+        }
+    }
+
+    private suspend fun saveCityToPrefs(city: String) {
+        appPrefs.updateShowCompleted(city)
     }
 
     // save city to savedStateHandle to persist across process death.
@@ -108,22 +127,6 @@ class WeatherViewModel @Inject constructor(
 
     private fun getLastKnownCity(): String {
         return savedStateHandle.get<String>("city").orEmpty()
-    }
-
-    private fun fetchLocationPrefs() {
-        // TODO: This might conflict with the onChange callback,
-        //  need to find the right way to have single source of truth to avoid ambiguity.
-        viewModelScope.launch {
-            appPrefs.cityFlow.collect { city ->
-                updateSearchQuery(city)
-            }
-        }
-    }
-
-    private fun saveCityToPrefs(city: String) {
-        viewModelScope.launch {
-            appPrefs.updateShowCompleted(city)
-        }
     }
 }
 
