@@ -9,19 +9,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.yousuf.weatherapp.R
 import com.yousuf.weatherapp.WeatherViewModel
 
 @Composable
 fun ErrorScreen(
-    message: String,
-    viewModel: WeatherViewModel
+    viewModel: WeatherViewModel = hiltViewModel()
 ) {
+
+    val errorMessage = rememberSaveable("error") {
+        viewModel.errorMessage
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -30,7 +36,7 @@ fun ErrorScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = message,
+            text = errorMessage.value,
             fontSize = 14.sp,
             style = MaterialTheme.typography.bodyMedium.copy(
                 color = MaterialTheme.colorScheme.error

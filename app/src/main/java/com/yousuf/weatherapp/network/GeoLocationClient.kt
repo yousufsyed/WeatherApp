@@ -14,7 +14,7 @@ interface GeoLocationClient {
     suspend fun fetchGeoLocation(city: String): GeoLocation
 }
 
-class GeoLocationClientImpl @Inject constructor(
+class DefaultGeoLocationClient @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
     private val weatherService: WeatherService
 ) : GeoLocationClient {
@@ -29,7 +29,7 @@ class GeoLocationClientImpl @Inject constructor(
                     KEY_APP_ID to BuildConfig.WEATHER_API_KEY
                 )
             ).let { response ->
-                if(response.isSuccessful) {
+                if(response.isSuccessful && response.body() != null) {
                     response.body()!!.toGeoLocation()
                 } else {
                     throw GeoLocationException()

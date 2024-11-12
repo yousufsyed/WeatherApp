@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.yousuf.weatherapp.WeatherUiState
 import com.yousuf.weatherapp.WeatherViewModel
@@ -13,7 +14,7 @@ import com.yousuf.weatherapp.WeatherViewModel
 @Composable
 fun WeatherInfoPrompt(
     modifier: Modifier,
-    viewModel: WeatherViewModel
+    viewModel: WeatherViewModel = hiltViewModel(),
 ) = Box(
     modifier = modifier,
     contentAlignment = Alignment.Center,
@@ -21,11 +22,11 @@ fun WeatherInfoPrompt(
     val weatherModel = viewModel.weatherUiState.collectAsStateWithLifecycle()
 
     val state by remember { weatherModel }
-    when (val result = state) {
 
+    when (state) {
         WeatherUiState.Loading -> LoadingScreen()
-        is WeatherUiState.Success -> WeatherScreen(weather = result.weather, cityName =viewModel.searchQuery.value)
-        is WeatherUiState.Error -> ErrorScreen(result.message, viewModel)
-        WeatherUiState.Search -> SearchScreen(viewModel)
+        WeatherUiState.Success -> WeatherScreen()
+        WeatherUiState.Error -> ErrorScreen()
+        WeatherUiState.Search -> SearchScreen()
     }
 }

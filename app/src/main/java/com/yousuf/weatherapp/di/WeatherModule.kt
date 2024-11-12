@@ -2,11 +2,10 @@ package com.yousuf.weatherapp.di
 
 import android.content.Context
 import com.yousuf.weatherapp.AppPrefs
-import com.yousuf.weatherapp.WeatherViewModelFactory
+import com.yousuf.weatherapp.network.DefaultGeoLocationClient
+import com.yousuf.weatherapp.network.DefaultWeatherClient
 import com.yousuf.weatherapp.network.GeoLocationClient
-import com.yousuf.weatherapp.network.GeoLocationClientImpl
 import com.yousuf.weatherapp.network.WeatherClient
-import com.yousuf.weatherapp.network.WeatherClientImpl
 import com.yousuf.weatherapp.network.WeatherService
 import com.yousuf.weatherapp.provider.DispatcherProvider
 import com.yousuf.weatherapp.provider.GeoLocationProvider
@@ -22,13 +21,11 @@ import kotlinx.coroutines.Dispatchers
 import retrofit2.Retrofit
 import javax.inject.Singleton
 
+const val BASE_URL = "https://api.openweathermap.org"
+
 @Module
 @InstallIn(SingletonComponent::class)
 class WeatherModule {
-
-    companion object {
-        const val BASE_URL = "https://api.openweathermap.org"
-    }
 
     @Provides
     fun providesRetrofit(): Retrofit = Retrofit.Builder()
@@ -41,23 +38,16 @@ class WeatherModule {
         retrofit.create(WeatherService::class.java)
 
     @Provides
-    fun providesWeatherClient(impl: WeatherClientImpl): WeatherClient = impl
+    fun providesWeatherClient(impl: DefaultWeatherClient): WeatherClient = impl
 
     @Provides
     fun providesWeatherProvider(impl: WeatherProviderImpl): WeatherProvider = impl
 
     @Provides
-    fun providesGeoLocationClient(impl: GeoLocationClientImpl): GeoLocationClient = impl
+    fun providesGeoLocationClient(impl: DefaultGeoLocationClient): GeoLocationClient = impl
 
     @Provides
     fun providesGeoLocationProvider(impl: GeoLocationProviderImpl): GeoLocationProvider = impl
-
-    @Provides
-    fun providesWeatherViewModelFactory(
-        weatherProvider: WeatherProvider,
-        geoLocationProvider: GeoLocationProvider,
-        appPrefs: AppPrefs
-    ) = WeatherViewModelFactory(weatherProvider, geoLocationProvider, appPrefs)
 
     @Provides
     fun providesAppPrefs(

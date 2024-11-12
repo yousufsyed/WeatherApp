@@ -1,10 +1,8 @@
 package com.yousuf.weatherapp
 
-import com.yousuf.weatherapp.network.WeatherClientImpl
+import com.yousuf.weatherapp.network.DefaultWeatherClient
 import com.yousuf.weatherapp.network.WeatherDataException
 import com.yousuf.weatherapp.network.WeatherService
-import com.yousuf.weatherapp.network.data.GeoLocation
-import com.yousuf.weatherapp.network.data.WeatherData
 import com.yousuf.weatherapp.provider.DispatcherProvider
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
@@ -30,7 +28,7 @@ class WeatherClientTest {
     private val dispatcher = UnconfinedTestDispatcher()
     private val dispatcherProvider = DispatcherProvider(io = dispatcher)
 
-    private lateinit var weatherClient: WeatherClientImpl
+    private lateinit var weatherClient: DefaultWeatherClient
 
     @Before
     fun setUp() {
@@ -39,7 +37,7 @@ class WeatherClientTest {
             .baseUrl(mockWebServer.url("/"))
             .build().create(WeatherService::class.java)
 
-        weatherClient = WeatherClientImpl(
+        weatherClient = DefaultWeatherClient(
             dispatcherProvider,
             weatherService = weatherService
         )

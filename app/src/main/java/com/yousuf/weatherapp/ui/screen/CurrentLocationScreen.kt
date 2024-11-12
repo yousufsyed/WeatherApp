@@ -20,16 +20,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat.checkSelfPermission
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.android.gms.location.LocationServices
 import com.yousuf.weatherapp.R
+import com.yousuf.weatherapp.WeatherViewModel
 import com.yousuf.weatherapp.network.data.GeoLocation
 import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun ShowRationalDialog(
-    action: (GeoLocation) -> Unit,
+    viewModel: WeatherViewModel = hiltViewModel<WeatherViewModel>()
 ) {
     val permissions = listOf<String>(ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION)
     val showRationalDialog = remember { mutableStateOf(false) }
@@ -42,7 +44,11 @@ fun ShowRationalDialog(
                 acc && isPermissionGranted
             }
             if (isGranted) {
-                getCurrentLocation(context, action, ::onLocationFetchFailed)
+                getCurrentLocation(
+                    context,
+                    { location -> viewModel.updateLocation(location) },
+                    ::onLocationFetchFailed
+                )
             } else {
                 onPermissionDenied(context)
             }
@@ -73,7 +79,11 @@ fun ShowRationalDialog(
                         showRationalDialog.value = false
                         if (context.hasLocationPermission()) {
                             // Permission already granted, update the location
-                            getCurrentLocation(context, action, ::onLocationFetchFailed)
+                            getCurrentLocation(
+                                context,
+                                { location -> viewModel.updateLocation(location) },
+                                ::onLocationFetchFailed
+                            )
                         } else {
                             requestPermissionLauncher.launch(permissions.toTypedArray()) // Request location permission
                         }
@@ -142,11 +152,7 @@ private fun getCurrentLocation(
         }
         .addOnFailureListener { exception ->
             // Handle location retrieval failure
-            Toast.makeText(
-                context,
-                "Can't get your Location. Please enter manually.",
-                Toast.LENGTH_SHORT
-            ).show()
+            onFailureListener(context)
         }
 }
 

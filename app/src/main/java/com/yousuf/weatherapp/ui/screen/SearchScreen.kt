@@ -1,11 +1,8 @@
 package com.yousuf.weatherapp.ui.screen
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -17,13 +14,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.yousuf.weatherapp.R
 import com.yousuf.weatherapp.WeatherViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    viewModel: WeatherViewModel
+    viewModel: WeatherViewModel = hiltViewModel()
 ) {
     Column(
         modifier = Modifier
@@ -33,9 +31,7 @@ fun SearchScreen(
         verticalArrangement = Arrangement.Center
     ) {
         // Show location rational dialog only if possible
-        ShowRationalDialog { location ->
-            viewModel.updateLocation(location)
-        }
+        ShowRationalDialog()
 
         val text = remember { viewModel.searchQuery }
         OutlinedTextField(

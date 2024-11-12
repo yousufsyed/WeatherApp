@@ -18,7 +18,7 @@ interface WeatherClient {
 /***
  * Network client to fetch weather data from api
  */
-class WeatherClientImpl @Inject constructor(
+class DefaultWeatherClient @Inject constructor(
     private val dispatcherProvider: DispatcherProvider,
     private val weatherService: WeatherService
 ) : WeatherClient {
@@ -33,7 +33,7 @@ class WeatherClientImpl @Inject constructor(
                     KEY_APP_ID to BuildConfig.WEATHER_API_KEY
                 )
             ).let { response ->
-                if(response.isSuccessful) {
+                if(response.isSuccessful && response.body() != null) {
                     response.body()!!.toWeatherData()
                 } else {
                     // for now just throwing an exception if the api response is failure,

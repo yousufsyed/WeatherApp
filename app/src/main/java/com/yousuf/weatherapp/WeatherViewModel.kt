@@ -13,13 +13,15 @@ import com.yousuf.weatherapp.network.data.GeoLocation
 import com.yousuf.weatherapp.network.data.WeatherData
 import com.yousuf.weatherapp.provider.GeoLocationProvider
 import com.yousuf.weatherapp.provider.WeatherProvider
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-class WeatherViewModel(
+@HiltViewModel
+class WeatherViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val weatherProvider: WeatherProvider,
     private val geoLocationProvider: GeoLocationProvider,
@@ -34,6 +36,13 @@ class WeatherViewModel(
 
     var searchQuery = mutableStateOf(getLastKnownCity())
         private set
+
+    var errorMessage = mutableStateOf("")
+        private set
+
+    var weatherData = mutableStateOf(null as WeatherData?)
+        private set
+
 
     init {
         fetchLocationPrefs()
@@ -63,13 +72,15 @@ class WeatherViewModel(
                 val geoLocation = geoLocationProvider.getGeoLocation(city)
                 // get weather data
                 weatherProvider.getWeatherData(geoLocation)
-            }.onSuccess { weatherData ->
-                _weatherUiState.update { Success(weatherData) }
+            }.onSuccess { weather ->
+                weatherData.value = weather
+                _weatherUiState.update { Success }
                 _canRetry.update { true }
                 saveCityToPrefs(city)
             }.onFailure { error ->
                 // TODO need to update error message logic to support localization.
-                _weatherUiState.update { Error(error.message ?: "Unknown error") }
+                errorMessage.value = error.message ?: "Unknown error"
+                _weatherUiState.update {Error }
                 _canRetry.update { true }
             }
         }
@@ -116,30 +127,9 @@ class WeatherViewModel(
     }
 }
 
-/**
- * Factory class to instantiate [WeatherViewModel]
- */
-class WeatherViewModelFactory @Inject constructor(
-    private val weatherProvider: WeatherProvider,
-    private val geoLocationProvider: GeoLocationProvider,
-    private val appPrefs: AppPrefs
-) : AbstractSavedStateViewModelFactory() {
-    override fun <T : ViewModel> create(
-        key: String,
-        modelClass: Class<T>,
-        handle: SavedStateHandle
-    ): T {
-        if (modelClass.isAssignableFrom(WeatherViewModel::class.java)) {
-            return WeatherViewModel(handle, weatherProvider, geoLocationProvider, appPrefs) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-
-}
-
 sealed class WeatherUiState {
     data object Search : WeatherUiState()
     data object Loading : WeatherUiState()
-    data class Success(val weather: WeatherData) : WeatherUiState()
-    data class Error(val message: String) : WeatherUiState()
+    data object Error : WeatherUiState()
+    data object Success : WeatherUiState()
 }
