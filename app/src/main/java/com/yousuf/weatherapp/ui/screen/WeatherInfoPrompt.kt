@@ -8,7 +8,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.yousuf.weatherapp.WeatherUiState
+import com.yousuf.weatherapp.WeatherUiState.Error
+import com.yousuf.weatherapp.WeatherUiState.Loading
+import com.yousuf.weatherapp.WeatherUiState.Search
+import com.yousuf.weatherapp.WeatherUiState.Success
 import com.yousuf.weatherapp.WeatherViewModel
 
 @Composable
@@ -24,9 +27,9 @@ fun WeatherInfoPrompt(
     val state by remember { weatherModel }
 
     when (state) {
-        WeatherUiState.Loading -> LoadingScreen()
-        WeatherUiState.Success -> WeatherScreen()
-        WeatherUiState.Error -> ErrorScreen()
-        WeatherUiState.Search -> SearchScreen()
+        Loading -> LoadingScreen()
+        Success -> WeatherScreen()
+        Error -> ErrorScreen()
+        Search -> SearchScreen()
     }
 }

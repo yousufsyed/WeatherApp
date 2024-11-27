@@ -9,6 +9,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,10 +31,13 @@ fun SearchScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Todo check if location permissions dialog should be displayed.
         // Show location rational dialog only if possible
-        ShowRationalDialog()
+        LocationRationalDialog()
 
-        val text = remember { viewModel.searchQuery }
+        val state = viewModel.searchQuery.collectAsState(initial = "")
+        val text = remember { state }
+
         OutlinedTextField(
             value =  text.value,
             onValueChange = { viewModel.updateSearchQuery(it) },
@@ -44,8 +48,8 @@ fun SearchScreen(
 
         Button(
             modifier = Modifier.padding(top = 16.dp),
-            onClick = { viewModel.getWeatherData() },
-            enabled = text.value.isNotEmpty()
+            onClick = { viewModel.getWeatherData(text.value) },
+            enabled = text.value.isNotBlank()
         ) {
             Text(text = stringResource(id = R.string.search))
         }

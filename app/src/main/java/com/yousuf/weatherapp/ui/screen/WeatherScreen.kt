@@ -52,7 +52,7 @@ fun WeatherScreen(
         ) {
 
             Text(
-                text = viewModel.searchQuery.value,
+                text = viewModel.lastCitySearched,
                 fontSize = 24.sp,
                 style = MaterialTheme.typography.bodyLarge,
             )

@@ -15,17 +15,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.yousuf.weatherapp.R
 import com.yousuf.weatherapp.WeatherViewModel
+import com.yousuf.weatherapp.provider.MessageDelegate
 import com.yousuf.weatherapp.ui.screen.WeatherInfoPrompt
 import com.yousuf.weatherapp.ui.theme.WeatherAppTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -35,7 +43,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeatherAppTheme() {
+                val snackbarHostState = remember { SnackbarHostState() }
+                HandleSnackbar(snackbarHostState)
                 Scaffold(
+                    snackbarHost = {
+                        SnackbarHost(hostState = snackbarHostState)
+                    },
                     topBar = { Appbar() },
                     modifier = Modifier
                         .fillMaxSize()
@@ -47,6 +60,29 @@ class MainActivity : ComponentActivity() {
                             .padding(innerPadding)
                     )
                 }
+            }
+        }
+    }
+
+}
+
+@Composable
+fun HandleSnackbar(snackbarHostState: SnackbarHostState,) {
+
+    val scope = rememberCoroutineScope()
+
+    ObserveAsEvents( flow = MessageDelegate.events, snackbarHostState) { event ->
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = event.message,
+                actionLabel = event.action?.name,
+                duration = SnackbarDuration.Short
+            )
+
+            when (result) {
+                SnackbarResult.ActionPerformed -> event.action?.action?.invoke()
+                SnackbarResult.Dismissed -> {}
             }
         }
     }

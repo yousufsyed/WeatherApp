@@ -1,14 +1,18 @@
 package com.yousuf.weatherapp
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.yousuf.weatherapp.WeatherUiState.Error
+import com.yousuf.weatherapp.WeatherUiState.Loading
+import com.yousuf.weatherapp.WeatherUiState.Search
+import com.yousuf.weatherapp.WeatherUiState.Success
 import com.yousuf.weatherapp.network.data.GeoLocation
 import com.yousuf.weatherapp.network.data.WeatherData
+import com.yousuf.weatherapp.provider.GeoLocationDataSource
 import com.yousuf.weatherapp.provider.GeoLocationProvider
+import com.yousuf.weatherapp.provider.LocationProvider
 import com.yousuf.weatherapp.provider.WeatherProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,17 +26,14 @@ class WeatherViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val weatherProvider: WeatherProvider,
     private val geoLocationProvider: GeoLocationProvider,
-    private val appPrefs: AppPrefs
+    private val locationProvider: LocationProvider
 ) : ViewModel() {
 
-    private val _weatherUiState = MutableStateFlow<WeatherUiState>(WeatherUiState.Search)
+    private val _weatherUiState = MutableStateFlow<WeatherUiState>(Search)
     val weatherUiState = _weatherUiState.asStateFlow()
 
     private val _canRetry = MutableStateFlow(true)
     val canRetry = _canRetry.asStateFlow()
-
-    var searchQuery = mutableStateOf(getLastKnownCity())
-        private set
 
     var errorMessage = mutableStateOf("")
         private set
@@ -40,84 +41,62 @@ class WeatherViewModel @Inject constructor(
     var weatherData = mutableStateOf(null as WeatherData?)
         private set
 
-    var locationErrorMessage = mutableStateOf(false)
+    var searchQuery = locationProvider.locationFlow()
         private set
 
-    var showDialog = mutableStateOf(true)
+    var lastCitySearched = ""
         private set
-
-    fun disablePermissionsDialog() {
-        showDialog.value = false
-    }
 
     init {
-        viewModelScope.launch {
-            fetchLocationPrefs()
-        }
+        fetchLastKnownCity()
     }
 
-    fun updateSearchQuery(query: String) {
-        searchQuery.value = query
-        saveCity(query)
+    fun updateSearchQuery(city: String) {
+        if(city.isNotBlank()) {
+            locationProvider.updateLocation(city)
+        }
     }
 
     fun showSearch() {
-        _weatherUiState.update { WeatherUiState.Search }
+        _weatherUiState.update { Search }
     }
 
     // fetch weather data and display appropriate state
-    fun getWeatherData() {
-        if (searchQuery.value.isEmpty()) {
-            showSearch()
-            return
-        }
-
+    fun getWeatherData(city: String) {
         _canRetry.update { false } // reset retry flag to false
-        _weatherUiState.update { WeatherUiState.Loading }
-        fetchWeatherData(searchQuery.value)
+        _weatherUiState.update { Loading }
+        lastCitySearched = city
+        fetchWeatherData()
     }
 
-    private fun fetchWeatherData(city: String) {
+    private fun fetchWeatherData() {
         viewModelScope.launch {
             runCatching {
+                // save city to prefs
+                saveCity(lastCitySearched)
+                locationProvider.saveCityToPrefs(lastCitySearched)
                 // gets the geo location
-                val geoLocation = geoLocationProvider.getGeoLocation(city)
+                val geoLocation = geoLocationProvider.getGeoLocation(lastCitySearched)
                 // get weather data
                 weatherProvider.getWeatherData(geoLocation)
             }.onSuccess { weather ->
                 weatherData.value = weather
-                _weatherUiState.update { WeatherUiState.Success }
+                _weatherUiState.update { Success }
                 _canRetry.update { true }
-                saveCityToPrefs(city)
             }.onFailure { error ->
                 // TODO need to update error message logic to support localization.
                 errorMessage.value = error.message ?: "Unknown error"
                 _weatherUiState.update { Error }
                 _canRetry.update { true }
             }
+            saveCity(lastCitySearched)
         }
     }
 
     fun retry() {
-        getLastKnownCity().let {
-            getWeatherData()
-        }
-    }
-
-    // update location fetch from device
-    fun updateLocation(location: GeoLocation) {
-        updateSearchQuery(location.city)
-        geoLocationProvider.updateGeoLocation(location)
-    }
-
-    private suspend fun fetchLocationPrefs() {
-        appPrefs.cityFlow.collect { city ->
-            updateSearchQuery(city)
-        }
-    }
-
-    private suspend fun saveCityToPrefs(city: String) {
-        appPrefs.updateShowCompleted(city)
+        _canRetry.update { false } // reset retry flag to false
+        _weatherUiState.update { Loading }
+        fetchWeatherData()
     }
 
     // save city to savedStateHandle to persist across process death.
@@ -125,8 +104,10 @@ class WeatherViewModel @Inject constructor(
         savedStateHandle["city"] = city
     }
 
-    private fun getLastKnownCity(): String {
-        return savedStateHandle.get<String>("city").orEmpty()
+    private fun fetchLastKnownCity() {
+        savedStateHandle.get<String>("city")?.let {
+            locationProvider.updateLocation(it)
+        }
     }
 }
 
